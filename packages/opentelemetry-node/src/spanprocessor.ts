@@ -4,7 +4,8 @@ import type { Span as OtelSpan, SpanProcessor as OtelSpanProcessor } from '@open
 import { addGlobalEventProcessor, getCurrentHub } from '@sentry/core';
 import { Transaction } from '@sentry/tracing';
 import type { DynamicSamplingContext, Span as SentrySpan, TraceparentData, TransactionContext } from '@sentry/types';
-import { logger } from '@sentry/utils';
+import { logger, isString } from '@sentry/utils';
+import { SemanticAttributes } from '@opentelemetry/semantic-conventions';
 
 import { SENTRY_DYNAMIC_SAMPLING_CONTEXT_KEY, SENTRY_TRACE_PARENT_CONTEXT_KEY } from './constants';
 import { isSentryRequestSpan } from './utils/is-sentry-request';
@@ -93,6 +94,12 @@ export class SentrySpanProcessor implements OtelSpanProcessor {
    * @inheritDoc
    */
   public onEnd(otelSpan: OtelSpan): void {
+    const hub = getCurrentHub();
+    if (!hub) {
+      __DEBUG_BUILD__ && logger.error('SentrySpanProcessor has triggered onEnd before a hub has been setup.');
+      return;
+    }
+
     const otelSpanId = otelSpan.spanContext().spanId;
     const sentrySpan = SENTRY_SPAN_PROCESSOR_MAP.get(otelSpanId);
 
@@ -111,6 +118,45 @@ export class SentrySpanProcessor implements OtelSpanProcessor {
       SENTRY_SPAN_PROCESSOR_MAP.delete(otelSpanId);
       return;
     }
+
+    otelSpan.events.forEach(event => {
+      if (event.name !== 'exception') {
+        return;
+      }
+
+      const attributes = event.attributes;
+      if (!attributes) {
+        return;
+      }
+
+      const message = attributes[SemanticAttributes.EXCEPTION_MESSAGE];
+      if (!isString(message)) {
+        return;
+      }
+      const syntheticError = new Error(message);
+
+      const stack = attributes[SemanticAttributes.EXCEPTION_STACKTRACE];
+      if (isString(stack)) {
+        syntheticError.stack = stack;
+      }
+
+      const type = attributes[SemanticAttributes.EXCEPTION_TYPE];
+      if (isString(type)) {
+        syntheticError.name = type;
+      }
+
+      hub.captureException(syntheticError, {
+        captureContext: {
+          contexts: {
+            trace: {
+              trace_id: otelSpan.spanContext().traceId,
+              span_id: otelSpan.spanContext().spanId,
+              parent_span_id: otelSpan.parentSpanId,
+            },
+          },
+        },
+      });
+    });
 
     if (sentrySpan instanceof Transaction) {
       updateTransactionWithOtelData(sentrySpan, otelSpan);
