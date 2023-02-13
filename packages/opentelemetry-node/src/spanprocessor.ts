@@ -1,11 +1,11 @@
 import type { Context } from '@opentelemetry/api';
 import { trace } from '@opentelemetry/api';
 import type { Span as OtelSpan, SpanProcessor as OtelSpanProcessor } from '@opentelemetry/sdk-trace-base';
+import { SemanticAttributes } from '@opentelemetry/semantic-conventions';
 import { addGlobalEventProcessor, getCurrentHub } from '@sentry/core';
 import { Transaction } from '@sentry/tracing';
 import type { DynamicSamplingContext, Span as SentrySpan, TraceparentData, TransactionContext } from '@sentry/types';
-import { logger, isString } from '@sentry/utils';
-import { SemanticAttributes } from '@opentelemetry/semantic-conventions';
+import { isString, logger } from '@sentry/utils';
 
 import { SENTRY_DYNAMIC_SAMPLING_CONTEXT_KEY, SENTRY_TRACE_PARENT_CONTEXT_KEY } from './constants';
 import { isSentryRequestSpan } from './utils/is-sentry-request';
