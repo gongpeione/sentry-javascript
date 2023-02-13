@@ -130,10 +130,7 @@ export class SentrySpanProcessor implements OtelSpanProcessor {
       }
 
       const message = attributes[SemanticAttributes.EXCEPTION_MESSAGE];
-      if (!isString(message)) {
-        return;
-      }
-      const syntheticError = new Error(message);
+      const syntheticError = new Error(message as string | undefined);
 
       const stack = attributes[SemanticAttributes.EXCEPTION_STACKTRACE];
       if (isString(stack)) {
