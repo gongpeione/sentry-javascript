@@ -145,6 +145,10 @@ export class SentrySpanProcessor implements OtelSpanProcessor {
       hub.captureException(syntheticError, {
         captureContext: {
           contexts: {
+            otel: {
+              attributes: otelSpan.attributes,
+              resource: otelSpan.resource.attributes,
+            },
             trace: {
               trace_id: otelSpan.spanContext().traceId,
               span_id: otelSpan.spanContext().spanId,
