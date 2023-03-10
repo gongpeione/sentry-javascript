@@ -11,7 +11,7 @@ const mockCaptureException = jest.fn();
 let mockScope = new Scope();
 
 jest.mock('@sentry/node', () => {
-  const original = jest.requireActual('@sentry/core');
+  const original = jest.requireActual('@sentry/node');
   return {
     ...original,
     captureException: (err: unknown, cb: (arg0: unknown) => unknown) => {
