@@ -4,14 +4,15 @@ import { Scope } from '@sentry/node';
 // adding a custom resolver, which will take too much time.
 // eslint-disable-next-line import/no-unresolved
 import type { HandleServerError, RequestEvent } from '@sveltejs/kit';
+import { vi } from 'vitest';
 
 import { handleErrorWithSentry } from '../../src/server/handleError';
 
-const mockCaptureException = jest.fn();
+const mockCaptureException = vi.fn();
 let mockScope = new Scope();
 
-jest.mock('@sentry/node', () => {
-  const original = jest.requireActual('@sentry/node');
+vi.mock('@sentry/node', async () => {
+  const original = (await vi.importActual('@sentry/node')) as any;
   return {
     ...original,
     captureException: (err: unknown, cb: (arg0: unknown) => unknown) => {
@@ -22,10 +23,10 @@ jest.mock('@sentry/node', () => {
   };
 });
 
-const mockAddExceptionMechanism = jest.fn();
+const mockAddExceptionMechanism = vi.fn();
 
-jest.mock('@sentry/utils', () => {
-  const original = jest.requireActual('@sentry/utils');
+vi.mock('@sentry/utils', async () => {
+  const original = (await vi.importActual('@sentry/utils')) as Record<string, any>;
   return {
     ...original,
     addExceptionMechanism: (...args: unknown[]) => mockAddExceptionMechanism(...args),
@@ -68,7 +69,7 @@ describe('handleError', () => {
   });
 
   it('adds an exception mechanism', async () => {
-    const addEventProcessorSpy = jest.spyOn(mockScope, 'addEventProcessor').mockImplementationOnce(callback => {
+    const addEventProcessorSpy = vi.spyOn(mockScope, 'addEventProcessor').mockImplementationOnce(callback => {
       void callback({}, { event_id: 'fake-event-id' });
       return mockScope;
     });

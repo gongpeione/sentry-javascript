@@ -1,14 +1,17 @@
 import { Scope } from '@sentry/node';
 // eslint-disable-next-line import/no-unresolved
 import type { ServerLoad } from '@sveltejs/kit';
+// eslint-disable-next-line import/no-unresolved
+import { error } from '@sveltejs/kit';
+import { vi } from 'vitest';
 
 import { wrapLoadWithSentry } from '../../src/server/load';
 
-const mockCaptureException = jest.fn();
+const mockCaptureException = vi.fn();
 let mockScope = new Scope();
 
-jest.mock('@sentry/node', () => {
-  const original = jest.requireActual('@sentry/node');
+vi.mock('@sentry/node', async () => {
+  const original = (await vi.importActual('@sentry/node')) as any;
   return {
     ...original,
     captureException: (err: unknown, cb: (arg0: unknown) => unknown) => {
@@ -19,10 +22,10 @@ jest.mock('@sentry/node', () => {
   };
 });
 
-const mockAddExceptionMechanism = jest.fn();
+const mockAddExceptionMechanism = vi.fn();
 
-jest.mock('@sentry/utils', () => {
-  const original = jest.requireActual('@sentry/utils');
+vi.mock('@sentry/utils', async () => {
+  const original = (await vi.importActual('@sentry/utils')) as any;
   return {
     ...original,
     addExceptionMechanism: (...args: unknown[]) => mockAddExceptionMechanism(...args),
@@ -34,6 +37,7 @@ function getById(_id?: string) {
 }
 
 async function erroringLoad({ params }: Parameters<ServerLoad>[0]): Promise<ReturnType<ServerLoad>> {
+  throw error(500, 'error');
   return {
     post: getById(params.id),
   };
@@ -54,8 +58,12 @@ describe('wrapLoadWithSentry', () => {
     expect(mockCaptureException).toHaveBeenCalledTimes(1);
   });
 
+  // it('calls captureException on 500 error', async () => {
+
+  // });
+
   it('adds an exception mechanism', async () => {
-    const addEventProcessorSpy = jest.spyOn(mockScope, 'addEventProcessor').mockImplementationOnce(callback => {
+    const addEventProcessorSpy = vi.spyOn(mockScope, 'addEventProcessor').mockImplementationOnce(callback => {
       void callback({}, { event_id: 'fake-event-id' });
       return mockScope;
     });

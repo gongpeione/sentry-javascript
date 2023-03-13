@@ -63,7 +63,7 @@
     "lint:eslint": "eslint . --format stylish",
     "lint:prettier": "prettier --check \"{src,test,scripts}/**/**.ts\"",
     "test": "yarn test:unit",
-    "test:unit": "jest",
+    "test:unit": "vitest",
     "test:watch": "jest --watch"
   },
   "volta": {
