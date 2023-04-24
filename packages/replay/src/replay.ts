@@ -462,7 +462,17 @@ export class ReplayContainer implements ReplayContainerInterface {
   }
 
   /**
-   *
+   * Only flush if `this.recordingMode === 'session'`
+   */
+  public conditionalFlush(): Promise<void> {
+    if (this.recordingMode === 'buffer') {
+      return Promise.resolve();
+    }
+
+    return this.flushImmediate();
+  }
+
+  /**
    * Always flush via `_debouncedFlush` so that we do not have flushes triggered
    * from calling both `flush` and `_debouncedFlush`. Otherwise, there could be
    * cases of mulitple flushes happening closely together.
@@ -471,6 +481,13 @@ export class ReplayContainer implements ReplayContainerInterface {
     this._debouncedFlush();
     // `.flush` is provided by the debounced function, analogously to lodash.debounce
     return this._debouncedFlush.flush() as Promise<void>;
+  }
+
+  /**
+   * Cancels queued up flushes.
+   */
+  public cancelFlush(): void {
+    this._debouncedFlush.cancel();
   }
 
   /** Get the current sesion (=replay) ID */
@@ -715,7 +732,7 @@ export class ReplayContainer implements ReplayContainerInterface {
     // Send replay when the page/tab becomes hidden. There is no reason to send
     // replay if it becomes visible, since no actions we care about were done
     // while it was hidden
-    this._conditionalFlush();
+    void this.conditionalFlush();
   }
 
   /**
@@ -797,17 +814,6 @@ export class ReplayContainer implements ReplayContainerInterface {
     this.performanceEvents = [];
 
     return Promise.all(createPerformanceSpans(this, createPerformanceEntries(entries)));
-  }
-
-  /**
-   * Only flush if `this.recordingMode === 'session'`
-   */
-  private _conditionalFlush(): void {
-    if (this.recordingMode === 'buffer') {
-      return;
-    }
-
-    void this.flushImmediate();
   }
 
   /**

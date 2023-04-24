@@ -99,6 +99,9 @@ describe('Integration | errorSampleRate', () => {
       ]),
     });
 
+    jest.advanceTimersByTime(DEFAULT_FLUSH_MIN_DELAY);
+    await new Promise(process.nextTick);
+
     // This is from when we stop recording and start a session recording
     expect(replay).toHaveLastSentReplay({
       recordingPayloadHeader: { segment_id: 1 },
@@ -116,20 +119,6 @@ describe('Integration | errorSampleRate', () => {
       ]),
     });
 
-    jest.advanceTimersByTime(DEFAULT_FLUSH_MIN_DELAY);
-
-    // New checkout when we call `startRecording` again after uploading segment
-    // after an error occurs
-    expect(replay).toHaveLastSentReplay({
-      recordingData: JSON.stringify([
-        {
-          data: { isCheckout: true },
-          timestamp: BASE_TIMESTAMP + DEFAULT_FLUSH_MIN_DELAY + 40,
-          type: 2,
-        },
-      ]),
-    });
-
     // Check that click will get captured
     domHandler({
       name: 'click',
@@ -139,14 +128,15 @@ describe('Integration | errorSampleRate', () => {
     await new Promise(process.nextTick);
 
     expect(replay).toHaveLastSentReplay({
+      recordingPayloadHeader: { segment_id: 2 },
       recordingData: JSON.stringify([
         {
           type: 5,
-          timestamp: BASE_TIMESTAMP + 10000 + 60,
+          timestamp: BASE_TIMESTAMP + DEFAULT_FLUSH_MIN_DELAY + DEFAULT_FLUSH_MIN_DELAY + 80,
           data: {
             tag: 'breadcrumb',
             payload: {
-              timestamp: (BASE_TIMESTAMP + 10000 + 60) / 1000,
+              timestamp: (BASE_TIMESTAMP + DEFAULT_FLUSH_MIN_DELAY + DEFAULT_FLUSH_MIN_DELAY + 80) / 1000,
               type: 'default',
               category: 'ui.click',
               message: '<unknown>',
@@ -641,6 +631,10 @@ describe('Integration | errorSampleRate', () => {
 
     expect(replay).toHaveLastSentReplay();
 
+    // Flush from calling `stopRecording`
+    jest.runAllTimers()
+    await new Promise(process.nextTick);
+
     // Now wait after session expires - should stop recording
     mockRecord.takeFullSnapshot.mockClear();
     (getCurrentHub().getClient()!.getTransport()!.send as unknown as jest.SpyInstance<any>).mockClear();
@@ -746,16 +740,16 @@ it('sends a replay after loading the session multiple times', async () => {
   captureException(new Error('testing'));
 
   await new Promise(process.nextTick);
-  jest.advanceTimersByTime(DEFAULT_FLUSH_MIN_DELAY);
-  await new Promise(process.nextTick);
+  await advanceTimers(DEFAULT_FLUSH_MIN_DELAY);
 
-  expect(replay).toHaveSentReplay({
+  expect(replay).toHaveLastSentReplay({
     recordingData: JSON.stringify([{ data: { isCheckout: true }, timestamp: BASE_TIMESTAMP, type: 2 }, TEST_EVENT]),
   });
 
+  await advanceTimers(DEFAULT_FLUSH_MIN_DELAY);
   // Latest checkout when we call `startRecording` again after uploading segment
   // after an error occurs (e.g. when we switch to session replay recording)
   expect(replay).toHaveLastSentReplay({
-    recordingData: JSON.stringify([{ data: { isCheckout: true }, timestamp: BASE_TIMESTAMP + 5040, type: 2 }]),
+    recordingData: JSON.stringify([{ data: { isCheckout: true }, timestamp: BASE_TIMESTAMP + 10040, type: 2 }]),
   });
 });
