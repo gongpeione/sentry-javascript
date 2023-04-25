@@ -269,6 +269,7 @@ export interface ReplayPluginOptions extends ReplayNetworkOptions {
     traceInternals: boolean;
     mutationLimit: number;
     mutationBreadcrumbLimit: number;
+    delayFlushOnCheckout: number;
   }>;
 }
 
