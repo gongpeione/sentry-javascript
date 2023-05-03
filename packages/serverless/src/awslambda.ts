@@ -5,8 +5,6 @@ import { captureException, captureMessage, flush, getCurrentHub, withScope } fro
 import type { Integration } from '@sentry/types';
 import {
   baggageHeaderToDynamicSamplingContext,
-  dsnFromString,
-  dsnToString,
   extractTraceparentData,
   isString,
   logger,
@@ -56,27 +54,6 @@ export interface WrapperOptions {
 
 export const defaultIntegrations: Integration[] = [...Sentry.defaultIntegrations, new AWSServices({ optional: true })];
 
-/**
- * Changes a Dsn to point to the `relay` server running in the Lambda Extension.
- *
- * This is only used by the serverless integration for AWS Lambda.
- *
- * @param originalDsn The original Dsn of the customer.
- * @returns Dsn pointing to Lambda extension.
- */
-function extensionRelayDSN(originalDsn: string | undefined): string | undefined {
-  if (originalDsn === undefined) {
-    return undefined;
-  }
-
-  const dsn = dsnFromString(originalDsn);
-  dsn.host = 'localhost';
-  dsn.port = '5333';
-  dsn.protocol = 'http';
-
-  return dsnToString(dsn);
-}
-
 interface AWSLambdaOptions extends Sentry.NodeOptions {
   /**
    * Internal field that is set to `true` when init() is called by the Sentry AWS Lambda layer.
@@ -105,12 +82,6 @@ export function init(options: AWSLambdaOptions = {}): void {
     ],
     version: Sentry.SDK_VERSION,
   };
-
-  // If invoked by the Sentry Lambda Layer point the SDK to the Lambda Extension (inside the layer) instead of the host
-  // specified in the DSN
-  if (options._invokedByLambdaLayer) {
-    options.dsn = extensionRelayDSN(options.dsn);
-  }
 
   Sentry.init(options);
   Sentry.addGlobalEventProcessor(serverlessEventProcessor);

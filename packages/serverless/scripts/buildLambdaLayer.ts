@@ -46,6 +46,12 @@ async function buildLambdaLayer(): Promise<void> {
     '../build/npm/cjs/awslambda-auto.js',
     'build/aws/dist-serverless/nodejs/node_modules/@sentry/serverless/dist/awslambda-auto.js',
   );
+
+  const version = run(`cat package.json | jq --raw-output '.version'`, { stdio: 'pipe' }).trim();
+  const zipFilename = `sentry-node-serverless-${version}.zip`;
+  console.log(`Creating final layer zip file ${zipFilename}.`);
+  // need to preserve the symlink above with -y
+  run(`zip -r -y ${zipFilename} .`, { cwd: 'build/aws/dist-serverless' });
 }
 
 void buildLambdaLayer();
