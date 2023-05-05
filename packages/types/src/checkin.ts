@@ -49,7 +49,7 @@ interface FinishedCheckIn {
   // The distinct slug of the monitor.
   monitorSlug: SerializedCheckIn['monitor_slug'];
   // Check-In ID (unique and client generated).
-  checkInId: SerializedCheckIn['check_in_id'];
+  checkInId?: SerializedCheckIn['check_in_id'];
   // The status of the check-in.
   status: 'ok' | 'error';
   // The duration of the check-in in seconds. Will only take effect if the status is ok or error.
